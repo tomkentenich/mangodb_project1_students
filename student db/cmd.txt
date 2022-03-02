@@ -1,0 +1,84 @@
+1) Find the student name who scored maximum scores in all (exam, quiz and
+homework)?
+
+	db.T1.aggregate([{$group:{ _id: "$name",maxscore: { $max: "$scores.score" }}},{$sort:{"maxscore":-1}}, {$limit : 3} ])
+	
+	output:
+		
+		{ _id: 'Gwen Honig',maxscore: [ 87.14345376886205, 99.45824441135635, 76.66460454219344 ] }
+		{ _id: 'Margart Vitello',maxscore: [ 99.33685767140612, 1.25322762871457, 66.22827571617455 ] }
+		{ _id: 'Joaquina Arbuckle',maxscore: [ 35.43562368815135, 89.74640983145014, 99.13868686848834 ] }
+
+2) Find students who scored below average in the exam and pass mark is 40%?
+
+	db.T1.find({scores:{$elemMatch:{type:"exam",score:{$lt:40}}}})
+
+3) Find students who scored below pass mark and assigned them as fail, and above
+pass mark as pass in all the categories.
+
+
+	db.T1.updateMany({scores:{$elemMatch:{score:{$gte:40}}}},{$set: {"result":"Pass"}})
+
+	db.T1.updateMany({scores:{$elemMatch:{score:{$lt:40}}}},{$set: {"result":"fail"}})
+
+4) Find the total and average of the exam, quiz and homework and store them in a
+separate collection.
+
+	db.T1.find().forEach(function(d){ db.getSiblingDB('Students')['average'].insert(d); });
+	
+	db.average.aggregate([{$set:{avgmark:{$avg:"$scores.score"}}}])
+	
+
+5) Create a new collection which consists of students who scored below average and
+above 40% in all the categories.
+
+	db.T1.find().forEach(function(d){ db.getSiblingDB('Students')['averagebelabo'].insert(d); });
+	
+	db.averagebelabo.aggregate([{$set:{avgmark:{$avg:"$scores.score"}}}])
+	
+	db.averagebelabo.updateMany({scores:{$elemMatch:{avgmark:{$gte:40}}}},{$set: {"avg":"high"}})
+	
+	db.averagebelabo.updateMany({scores:{$elemMatch:{avgmark:{$lt:40}}}},{$set: {"avg":"low"}})
+
+
+
+6) Create a new collection which consists of students who scored below the fail mark
+in all the categories.
+	
+	db.T1.find().forEach(function(d){ db.getSiblingDB('Students')['failstu'].insert(d); });	
+	
+
+	db.failstu.updateMany({scores:{$elemMatch:{type:"exam",score:{$gte:40}}}},{$set: {"exam":"pass"}})
+
+	db.failstu.updateMany({scores:{$elemMatch:{type:"quiz",score:{$gte:40}}}},{$set: {"quiz":"pass"}})	
+
+
+	db.failstu.updateMany({scores:{$elemMatch:{type:"homework",score:{$gte:40}}}},{$set: {"homework":"pass"}})
+
+	db.failstu.deleteMany({exam:"pass"})
+	
+	db.failstu.deleteMany({quiz:"pass"})
+
+	db.failstu.deleteMany({homework:"pass"})
+	
+
+
+7) Create a new collection which consists of students who scored above pass mark in
+all the categories.
+
+	db.T1.find().forEach(function(d){ db.getSiblingDB('Students')['allpass'].insert(d); });
+	
+
+	db.allpass.updateMany({scores:{$elemMatch:{type:"exam",score:{$lt:40}}}},{$set: {"exam":"fail"}})
+
+	db.allpass.updateMany({scores:{$elemMatch:{type:"quiz",score:{$lt:40}}}},{$set: {"quiz":"fail"}})	
+
+
+	db.allpass.updateMany({scores:{$elemMatch:{type:"homework",score:{$lt:40}}}},{$set: {"homework":"fail"}})
+
+	db.allpass.deleteMany({exam:"fail"})
+	
+	db.allpass.deleteMany({quiz:"fail"})
+
+	db.allpass.deleteMany({homework:"fail"})
+	
